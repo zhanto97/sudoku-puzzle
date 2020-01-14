@@ -7,16 +7,22 @@ class Board:
     def __init__(self, difficulty):
         if not difficulty in ['easy', 'medium', 'hard']:
             raise ValueError("difficulty can be 'easy', 'medium' or 'hard'")
-
-        if difficulty == 'easy':
-            self.board = random.choice(easy_puzzles)
-        elif difficulty == 'medium':
-            self.board = random.choice(medium_puzzles)
-        else:
-            self.board = random.choice(hard_puzzles)
         
         self.size = 9
         self.block = 3 # sqrt(9)
+
+        if difficulty == 'easy':
+            board = random.choice(easy_puzzles)
+        elif difficulty == 'medium':
+            board= random.choice(medium_puzzles)
+        else:
+            board = random.choice(hard_puzzles)
+        
+        self.board = [[0 for i in range(self.size)] for j in range(self.size)]
+        for i in range(self.size):
+            for j in range(self.size):
+                self.board[i][j] = board[i][j]
+
     
     def find_empty(self):
         """Finds an empty cell if exists.
@@ -43,8 +49,8 @@ class Board:
         x = pos[0] // self.block
         y = pos[1] // self.block
 
-        for i in range(x*self.block, x*self.block + 3):
-            for j in range(y*self.block, y*self.block + 3):
+        for i in range(x*self.block, x*self.block + self.block):
+            for j in range(y*self.block, y*self.block + self.block):
                 if self.board[i][j] == num:
                     return False
         return True
@@ -76,7 +82,7 @@ class Board:
     def print_board(self):
         for i in range(self.size):
             if i%3 == 0:
-                print("- " * 13)
+                print("- " * (self.size + self.block + 1))
             for j in range(self.size):
                 if j%3 == 0:
                     print("| ", end = "")
@@ -85,11 +91,18 @@ class Board:
                     print(self.board[i][j], end = " |\n")
                 else:
                     print(self.board[i][j], end = " ")
-        print("- " * 13)
+        print("- " * (self.size + self.block + 1))
+    
+    def copy(self):
+        board = Board('easy')
+        for i in range(self.size):
+            for j in range(self.size):
+                board.board[i][j] = self.board[i][j]
+        return board
 
 
-b = Board('hard')
-b.print_board()
-b.solve()
-print("Solved version")
-b.print_board()
+# b = Board('hard')
+# b.print_board()
+# b.solve()
+# print("Solved version")
+# b.print_board()
