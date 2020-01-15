@@ -1,6 +1,6 @@
-from easy_puzzles import easy_puzzles
-from medium_puzzles import medium_puzzles
-from hard_puzzles import hard_puzzles
+from puzzles import easy_puzzles
+from puzzles import medium_puzzles
+from puzzles import hard_puzzles
 import random
 
 class Board:
@@ -12,11 +12,11 @@ class Board:
         self.block = 3 # sqrt(9)
 
         if difficulty == 'easy':
-            board = random.choice(easy_puzzles)
+            board = random.choice(easy_puzzles.easy_puzzles)
         elif difficulty == 'medium':
-            board= random.choice(medium_puzzles)
+            board= random.choice(medium_puzzles.medium_puzzles)
         else:
-            board = random.choice(hard_puzzles)
+            board = random.choice(hard_puzzles.hard_puzzles)
         
         self.board = [[0 for i in range(self.size)] for j in range(self.size)]
         for i in range(self.size):
