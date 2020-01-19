@@ -1,10 +1,11 @@
 import pygame
 import sudoku
+import threading
 
 class App:
     def __init__(self, difficulty):
         self.running = True
-        self.size = self.width, self.height = 660, 750
+        self.size = self.width, self.height = 660, 800
         self.board = sudoku.Board(difficulty)
         self.initial = [[0 for i in range(self.board.size)]
                             for j in range(self.board.size)]
@@ -23,6 +24,7 @@ class App:
         self.candidate = 0
         self.wrong_cell = None
         self.wrong_time = 0
+        self.animating = False
 
     def finished(self):
         """Returns True if puzzle is solved. False otherwise
@@ -79,6 +81,22 @@ class App:
                 self.wrong_cell = None
                 self.wrong_time = 0
 
+    def draw_animation(self):
+        """Fills tried cells with light blue and places number when
+        backtrack solution animation is taking place
+        """
+        if self.animating:
+            cell = self.width // (self.board.size + 2)
+            for i in range(self.board.size):
+                for j in range(self.board.size):
+                    if self.animation[i][j] != 0:
+                        pygame.draw.rect(self.display, (153, 207, 224),
+                            (cell + j*cell, cell + i*cell, cell, cell), 0)
+                        text = self.font.render(str(self.animation[i][j]), True, (0, 0, 0))
+                        rect = text.get_rect()
+                        rect.center = (cell + j*cell + cell//2, cell + i*cell + cell//2)
+                        self.display.blit(text, rect)
+
     def draw_numbers(self):
         """Draws numbers in respective cells
         """
@@ -103,6 +121,19 @@ class App:
                     cell + self.selected[0]*cell + cell//2)
                 self.display.blit(text, rect)
 
+    def draw_solve_button(self):
+        """Draws "Solve" button on the bottom
+        """
+        cell = self.width // (self.board.size + 2)
+        pygame.draw.rect(self.display, (0, 0, 0),
+                        (cell + 3*cell, cell + 10*cell, 
+                        3*cell, cell), 2)
+        text = self.font.render("Solve", True, (0, 0, 0))
+        rect = text.get_rect()
+        rect.center = (cell + 3*cell + int(cell*1.5),
+            cell + 10*cell + cell//2)
+        self.display.blit(text, rect)
+
     def find_cell_by_pos(self, pos):
         """Finds which cell is selected by mouse position POS
         """
@@ -114,6 +145,41 @@ class App:
         y = pos[1] // cell
         return (y-1, x-1)
     
+    def find_solve_button(self, pos):
+        """Returns True if mouse is pressed on "Solve" button.
+        False otherwise
+        """
+        cell = self.width // (self.board.size + 2)
+        x = pos[0]
+        y = pos[1]
+        return cell + 10*cell < y and y < cell + 11*cell and \
+            cell + 3*cell < x and x < cell * 6*cell
+
+    def solve_animation(self):
+        """Shows visualization of how backtracking
+        solver solves the puzzle
+        """
+        if self.stop_thread:
+            return False
+
+        empty = self.board.find_empty()
+        if empty == None:
+            return True
+        
+        for num in range(1, self.board.size + 1):
+            if self.board.is_valid(empty, num):
+                self.animation[empty[0]][empty[1]] = num
+                self.board.board[empty[0]][empty[1]] = num
+                pygame.time.delay(50)
+
+                if self.solve_animation():
+                    return True
+                
+                self.board.board[empty[0]][empty[1]] = 0
+                self.animation[empty[0]][empty[1]] = 0
+                pygame.time.delay(50)
+        return False
+
     def switcher(self, event_key):
         """Event key to local key mapping
         """
@@ -128,7 +194,7 @@ class App:
             pygame.K_8: 8,
             pygame.K_9: 9,
             pygame.K_DELETE: 0,
-            pygame.K_RETURN: -1
+            pygame.K_RETURN: -1,
         }
         return switch.get(event_key, None)
 
@@ -137,17 +203,33 @@ class App:
         """
         if event.type == pygame.QUIT:
             self.running = False
+            if self.animating:
+                self.stop_thread = True
+                self.thread.join()
         elif event.type == pygame.MOUSEBUTTONDOWN:
+            if self.animating:
+                return
             pos = pygame.mouse.get_pos()
             board_pos = self.find_cell_by_pos(pos)
             if board_pos and self.initial[board_pos[0]][board_pos[1]] == 0:
                 if self.selected != board_pos:
                     self.selected = board_pos
                     self.candidate = 0
+            elif self.find_solve_button(pos):
+                self.selected = None
+                self.candidate = 0
+                self.animating = True
+                self.animation = [[0 for i in range(self.board.size)]
+                            for j in range(self.board.size)]
+                self.thread = threading.Thread(target=self.solve_animation)
+                self.stop_thread = False
+                self.thread.start()
             else:
                 self.selected = None
                 self.candidate = 0
         elif event.type == pygame.KEYDOWN:
+            if self.animating:
+                return
             key = self.switcher(event.key)
             if key == None:
                 return
@@ -171,9 +253,6 @@ class App:
                     self.wrong_time = ticks
                     self.candidate = 0
 
-    def on_loop(self):
-        pass
-
     def on_render(self):
         """Renders Sudoku puzzle on display
         """
@@ -181,11 +260,12 @@ class App:
         self.highlight_initial()
         self.highlight_selected()
         self.highlight_wrong()
+        self.draw_animation()
         self.draw_cells()
         self.draw_numbers()
         self.draw_candidate()
+        self.draw_solve_button()
         pygame.display.update()
-
 
     def on_cleanup(self):
         pygame.quit()
@@ -199,12 +279,13 @@ class App:
         while self.running:
             for event in pygame.event.get():
                 self.on_event(event)
-            self.on_loop()
             self.on_render()
             
             if self.finished():
                 self.running = False
-                print("Congratulations")
+                # print("Congratulations!")
+        self.on_render()
+        pygame.time.delay(1000)
         self.on_cleanup()
 
 if __name__ == "__main__" :
