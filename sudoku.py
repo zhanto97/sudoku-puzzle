@@ -99,10 +99,3 @@ class Board:
             for j in range(self.size):
                 board.board[i][j] = self.board[i][j]
         return board
-
-
-# b = Board('hard')
-# b.print_board()
-# b.solve()
-# print("Solved version")
-# b.print_board()
